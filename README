@@ -1,0 +1,14 @@
+
+Attempt to make a high speed video capture app for native ps3eye interface developed at nuigroup.com
+
+<ESC> to quit
+<SPACE> to record
+
+File saved as output.avi in current directory
+
+TODO:
+
+add listener to start capture based on impact sound
+add gui elements, setup etc.
+add player to step through video
+add overlay lines to viewer
