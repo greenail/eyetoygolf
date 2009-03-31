@@ -1,3 +1,5 @@
 *.ncb
 *.pch
 *.pdb
+Release
+Debug

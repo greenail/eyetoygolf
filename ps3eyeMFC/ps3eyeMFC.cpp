@@ -1,8 +1,8 @@
 
 //----------------------------------------------------------------------
-// Date      : Oct 22, 2008; 20:00
+// Date      : 3/20/09
 //----------------------------------------------------------------------
-
+// credits, started with blatent rip of dandilion's blog post.  also used plenty of opencv examples.
 
 //TODO:
 // Figure out how to make ring buffer
