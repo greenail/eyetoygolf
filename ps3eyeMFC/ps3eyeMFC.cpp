@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 	//PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8];
 
 	//CvVideoWriter* aviOut2 = NULL;
-	CvVideoWriter* aviOut = cvCreateVideoWriter("output.avi", CV_FOURCC('D', 'I', 'V', 'X'),FPS, cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), 1); 
+	CvVideoWriter* aviOut2 = cvCreateVideoWriter("output2.avi", CV_FOURCC('D', 'I', 'V', 'X'),FPS, cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), 1); 
 
 	pCam->StartCapture();
 
@@ -100,24 +100,31 @@ int main(int argc, char *argv[])
 
 	// expiriment create buffer to store 300 frames, or 3 seconds
 
-	//PBYTE pRB=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8*300];
-	//Ring_Buffer rb(pRB,(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8*300);
 	
-	CCircularBuffer< IplImage, 300 > ringBuf;
-	
-	
+	// note copy each flat is true, may be slow...
+
+	//CCircularBuffer< IplImage, 300,true > ringBuf;
+
+	cout<< "Creating ring buffer "<<endl;
+	CCircularBuffer< PBYTE, 50 > ringBuf;
+	cout<< "Ring Buffer size is: "<< ringBuf.get_maxItems()<<" "<<endl;
 	// end expiriment
 	
 
 	//ESC to quit
+	int damnCount = 0;
 	while(key != 0x1b)
 	{
 		DWORD dwTimeStart=GetTickCount();
 		if(pCam->GetFrame((PBYTE)image->imageData, COLOR_DEPTH, false, true))
 		{
-			key = cvWaitKey(1);
 			
 			
+			if (ringBuf.is_full())
+				{
+				key = 32;
+				cout << " -BUFFER FULL- ";
+				}
 
 			long fTimeDifference=GetTickCount()-dwTimeStart;         
 			char buff[128];
@@ -128,8 +135,15 @@ int main(int argc, char *argv[])
 			{
 				if (movInit == true)
 				{
-					cvWriteFrame(aviOut, image);
-					//cout << ".";
+					// move write frame to end when buffer is full.
+					
+					cvWriteFrame(aviOut2, image);
+					
+					// expiriment to write 3 seconds of video to ring buffer then quit
+			
+					//damnCount = ringBuf.Write((PBYTE &)image->imageData,ringBuf.get_countUsed()+1);
+					damnCount = ringBuf.Write((PBYTE &)image->imageData);
+					cout << "."<<damnCount<<".";
 				}
 				else
 				{
@@ -150,8 +164,24 @@ int main(int argc, char *argv[])
 					record = false;
 					recordStarted = false;
 					movInit = false;
-					cout << "Completing video Writer "<<endl;
+					cout << "Attemting to create video "<<endl;
+					CvVideoWriter* aviOut = cvCreateVideoWriter("output.avi", CV_FOURCC('D', 'I', 'V', 'X'),FPS, cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), 1); 
+	
+					// try to pull images out of ring buffer
+					
+					cout << "Trying to write video from ring buffer, buffer size is: "<< ringBuf.get_countUsed() <<"  ..." <<endl;
+					for (unsigned int i = 0;i < ringBuf.get_maxItems();i++)
+					{
+						cout << "Writing frame: " << i << " buffer size is: "<< ringBuf.get_countUsed() <<"  ..." <<endl;
+						ringBuf.Read((PBYTE &)image->imageData);
+						cvWriteFrame(aviOut, image);
+						
+						// should break
+						//cvReleaseImage(&image);
+					}	
+					cout << endl << "Releasing video writer, should flush file write, buffer size is: "<< ringBuf.get_countUsed() <<"  ..." << endl;
 					cvReleaseVideoWriter(&aviOut);
+					cvReleaseVideoWriter(&aviOut2);
 				}
 			}
 
@@ -166,25 +196,20 @@ int main(int argc, char *argv[])
 			cvPutText (image,buff,cvPoint(30,30), &font, cvScalar(255,255,0));
 			cvShowImage(window_name, image);
 			
-			// expiriment to write 3 seconds of video to ring buffer then quit
 			
-			ringBuf.Write(image);
-			if (ringBuf.is_full())
-				{
-				key = 0x1b;
-				}
 			
-			// end expiriment
+			key = cvWaitKey(1);
+			
 		}
 	}
-	cout << ringBuf.get_countUsed() <<endl;
+	//cout << ringBuf.get_countUsed() <<endl;
 	
 
 	// pause for a while
 
-	key = cvWaitKey(5000);
+	//key = cvWaitKey(5000);
 
-	cvReleaseVideoWriter(&aviOut);
+	//cvReleaseVideoWriter(&aviOut);
 	pCam->StopCapture();
 
 	delete pCam;
