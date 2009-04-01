@@ -17,7 +17,7 @@
 //#include "Ring_Buffer.h"
 #include "CircularBuffer.h"
 #include <iostream>
-
+#include <vector>
 #include <cv.h>
 
 #include <cxcore.h>
@@ -106,13 +106,19 @@ int main(int argc, char *argv[])
 	//CCircularBuffer< IplImage, 300,true > ringBuf;
 
 	cout<< "Creating ring buffer "<<endl;
-	CCircularBuffer< PBYTE, 50 > ringBuf;
-	cout<< "Ring Buffer size is: "<< ringBuf.get_maxItems()<<" "<<endl;
+	//CCircularBuffer< PBYTE, 50 > ringBuf;
+
+	// my attempt at a "ring buffer"
+	int bufSize = 200;
+	vector<IplImage> ringBuf(0);
+
+	cout<< "Ring Buffer size is: "<< bufSize<<" "<<endl;
 	// end expiriment
 	
 
 	//ESC to quit
 	int damnCount = 0;
+	PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8]; 
 	while(key != 0x1b)
 	{
 		DWORD dwTimeStart=GetTickCount();
@@ -120,11 +126,7 @@ int main(int argc, char *argv[])
 		{
 			
 			
-			if (ringBuf.is_full())
-				{
-				key = 32;
-				cout << " -BUFFER FULL- ";
-				}
+			
 
 			long fTimeDifference=GetTickCount()-dwTimeStart;         
 			char buff[128];
@@ -133,17 +135,30 @@ int main(int argc, char *argv[])
 			sprintf( buff, "%d", nFramesPerSecond );
 			if (record == true )
 			{
+				if (damnCount >= bufSize)
+				{
+					key = 32;
+					cout << " -BUFFER FULL- ";
+				}
 				if (movInit == true)
 				{
 					// move write frame to end when buffer is full.
 					
-					cvWriteFrame(aviOut2, image);
+					
 					
 					// expiriment to write 3 seconds of video to ring buffer then quit
 			
 					//damnCount = ringBuf.Write((PBYTE &)image->imageData,ringBuf.get_countUsed()+1);
-					damnCount = ringBuf.Write((PBYTE &)image->imageData);
+					//memcpy(image->imageData, pBuffer, image->imageSize); 
+					//memcpy(pBuffer,image->imageData,image->imageSize);
+					int iSize = sizeof *image;
+					cout << "SizeOf image is: " << iSize <<endl;
+					//IplImage img2 = cvCloneImage(image);
+					ringBuf.push_back(*image);
+					//cvReleaseImage(&img2);
+					cvWriteFrame(aviOut2, image);
 					cout << "."<<damnCount<<".";
+					damnCount++;
 				}
 				else
 				{
@@ -169,17 +184,28 @@ int main(int argc, char *argv[])
 	
 					// try to pull images out of ring buffer
 					
-					cout << "Trying to write video from ring buffer, buffer size is: "<< ringBuf.get_countUsed() <<"  ..." <<endl;
-					for (unsigned int i = 0;i < ringBuf.get_maxItems();i++)
+					cout << "Trying to write video from ring buffer, buffer size is: "<< ringBuf.size() <<"  ..." <<endl;
+					for (unsigned int i = 0;i < ringBuf.size();i++)
 					{
-						cout << "Writing frame: " << i << " buffer size is: "<< ringBuf.get_countUsed() <<"  ..." <<endl;
-						ringBuf.Read((PBYTE &)image->imageData);
-						cvWriteFrame(aviOut, image);
-						
+						cout << "Writing frame: " << i << " buffer size is: "<< ringBuf.size() <<"  ..." <<endl;
+						//ringBuf.Read((PBYTE &)image->imageData);
+						int rSize = sizeof ringBuf[i];
+						if (rSize > 0)
+						{
+							cout << "SizeOf vector object is: " << rSize << endl;
+							//IplImage img2 = *ringBuf[i];
+							//cout << "actual ring buffer object: " << img2->imageSize << endl;
+							//cout << "actual ring buffer object: " << ringBuf[i] << endl;
+							cvWriteFrame(aviOut, &ringBuf[i]);
+							//cvShowImage(window_name, &ringBuf[i]);
+							//cvReleaseImage(img2);
+						}
 						// should break
 						//cvReleaseImage(&image);
 					}	
-					cout << endl << "Releasing video writer, should flush file write, buffer size is: "<< ringBuf.get_countUsed() <<"  ..." << endl;
+					ringBuf.clear();
+					damnCount = 0;
+					cout << endl << "Releasing video writer, should flush file write, buffer size is: "<< damnCount <<"  ..." << endl;
 					cvReleaseVideoWriter(&aviOut);
 					cvReleaseVideoWriter(&aviOut2);
 				}
