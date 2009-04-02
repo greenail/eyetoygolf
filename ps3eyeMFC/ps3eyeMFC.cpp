@@ -106,13 +106,20 @@ int main(int argc, char *argv[])
 	//CCircularBuffer< IplImage, 300,true > ringBuf;
 
 	cout<< "Creating ring buffer "<<endl;
-	//CCircularBuffer< PBYTE, 50 > ringBuf;
-
+	//
 	// my attempt at a "ring buffer"
 	int bufSize = 200;
-	vector<uchar*> ringBuf(0);
+	//vector<uchar*> ringBuf(0);
+	CCircularBuffer< uchar*, 200 > ringBuf;
 
 	cout<< "Ring Buffer size is: "<< bufSize<<" "<<endl;
+
+	cout << "Pre allocating memory for video" << endl;
+	for (int i = 0; i < bufSize;i++)
+	{
+		PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8]; 
+		ringBuf.Write(pBuffer);
+	}
 	// end expiriment
 	
 
@@ -154,13 +161,20 @@ int main(int argc, char *argv[])
 					
 
 					// Create new memory location for image, need to prealocate this in a ring buffer
-					PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8]; 
+					//PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8]; 
 					
+					PBYTE pBuffer = NULL;
+					ringBuf.Read(pBuffer);
+
+
 					// copy data from imageData pointer to pBuffer
 					memcpy(pBuffer,image->imageData,image->imageSize);
 					//push onto our ring buffer
-					ringBuf.push_back(pBuffer);
 					
+					//ringBuf.push_back(pBuffer);
+					ringBuf.Write(pBuffer);
+					cout << "Wrote: "<< &pBuffer<< " with count: "<< ringBuf.get_countUsed() <<"  ..." <<endl;
+
 
 					// write other avi and clean up
 					//cvWriteFrame(aviOut2, image);
@@ -199,34 +213,37 @@ int main(int argc, char *argv[])
 					//IplImage *image = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);
 					
 
-					cout << "Trying to write video from ring buffer, buffer size is: "<< ringBuf.size() <<"  ..." <<endl;
+					cout << "Trying to write video from ring buffer, buffer size is: "<< ringBuf.get_countUsed() <<"  ..." <<endl;
 
-					for (unsigned int i = 0;i < ringBuf.size();i++)
+					//for (unsigned int i = 0;i < ringBuf.size();i++)
+					int bufCount = ringBuf.get_countUsed();
+					for (int i = 0 ; i < bufCount ; i++)
 					{
 						//cout << "Writing frame: " << i << " buffer size is: "<< ringBuf.size() <<"  ..." <<endl;
 						//ringBuf.Read((PBYTE &)image->imageData);
-						int rSize = sizeof ringBuf[i];
-						if (rSize > 0)
-						{
-							//cout << "SizeOf vector object is: " << rSize << endl;
+						//int rSize = sizeof ringBuf[i];
+						//cout << "SizeOf vector object is: " << rSize << endl;
 							
-							// Create image, not sure if I need to dealocate this each iteration or not, may be faster not to.
-							IplImage *img2 = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);;
+						// Create image, not sure if I need to dealocate this each iteration or not, may be faster not to.
+						IplImage *img2 = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);;
 							
-							// copy data 
-							memcpy(img2->imageData,ringBuf[i],image->imageSize);
+						// copy data 
+						uchar * iPointer = NULL;
+						ringBuf.Read(iPointer);
+						cout << "Read: "<< &iPointer<< " with count: "<< ringBuf.get_countUsed() <<"  ..." <<endl;
+						memcpy(img2->imageData,iPointer,image->imageSize);
 							
-							// write frame to video
-							cvWriteFrame(aviOut, img2);
-
-							//release image, may not be nessisary
-							cvReleaseImage(&img2);
+						// write frame to video
+						cvWriteFrame(aviOut, img2);
+						//delete [] iPointer;
+						//release image, may not be nessisary
+						cvReleaseImage(&img2);
 							
-						}
+						
 						
 					}	
 					// clear vector, need to change to ring buffer
-					ringBuf.clear();
+					//ringBuf.clear();
 					damnCount = 0;
 					//cout << endl << "Releasing video writer, should flush file write, buffer size is: "<< damnCount <<"  ..." << endl;
 					cvReleaseVideoWriter(&aviOut);
