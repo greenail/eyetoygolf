@@ -126,12 +126,12 @@ int main(int argc, char *argv[])
 	//ESC to quit
 	int damnCount = 0;
 	
-	int maxX = (CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8;
-	
+	//int maxX = (CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8;
+	IplImage *image = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);
 	while(key != 0x1b)
 	{
 		DWORD dwTimeStart=GetTickCount();
-		IplImage *image = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);
+		//IplImage *image = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);
 		if(pCam->GetFrame((PBYTE)image->imageData, COLOR_DEPTH, false, true))
 		{
 			
@@ -164,8 +164,9 @@ int main(int argc, char *argv[])
 					//PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8]; 
 					
 					PBYTE pBuffer = NULL;
+					
 					ringBuf.Read(pBuffer);
-
+					if ((int)ringBuf.get_countUsed() < (int)ringBuf.get_maxItems()){cout << "-" ;}
 
 					// copy data from imageData pointer to pBuffer
 					memcpy(pBuffer,image->imageData,image->imageSize);
@@ -173,17 +174,20 @@ int main(int argc, char *argv[])
 					
 					//ringBuf.push_back(pBuffer);
 					ringBuf.Write(pBuffer);
-					cout << "Wrote: "<< &pBuffer<< " with count: "<< ringBuf.get_countUsed() <<"  ..." <<endl;
+					if ((int)ringBuf.get_countUsed() < (int)ringBuf.get_maxItems()){cout << "." ;}
 
 
 					// write other avi and clean up
 					//cvWriteFrame(aviOut2, image);
 					//cout << "."<<damnCount<<".";
+
+					//delete pointer?
+					//delete pBuffer;
 					damnCount++;
 				}
 				else
 				{
-					cout << "Creating video Writer "<<endl;
+					
 					movInit = true;
 				}
 			}
@@ -202,11 +206,11 @@ int main(int argc, char *argv[])
 					record = false;
 					recordStarted = false;
 					movInit = false;
-					cout << "Attemting to create video "<<endl;
+					cout << "Attemting to create video writer"<<endl;
 
 					// create ffmpeg video writer
 
-					CvVideoWriter* aviOut = cvCreateVideoWriter("output.avi", CV_FOURCC('D', 'I', 'V', 'X'),FPS, cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), 1); 
+					CvVideoWriter* aviOut = cvCreateVideoWriter("output.avi", CV_FOURCC('D', 'I', 'V', 'X'),30, cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), 1); 
 	
 					// try to pull images out of ring buffer
 					
@@ -265,11 +269,11 @@ int main(int argc, char *argv[])
 			
 			
 			key = cvWaitKey(1);
-			cvReleaseImage(&image);
+			//cvReleaseImage(&image);
 		}
 	}
 	//cout << ringBuf.get_countUsed() <<endl;
-	
+	cvReleaseImage(&image);
 
 	// pause for a while
 
