@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 	//PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8];
 
 	//CvVideoWriter* aviOut2 = NULL;
-	CvVideoWriter* aviOut2 = cvCreateVideoWriter("output2.avi", CV_FOURCC('D', 'I', 'V', 'X'),FPS, cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), 1); 
+	//CvVideoWriter* aviOut2 = cvCreateVideoWriter("output2.avi", CV_FOURCC('D', 'I', 'V', 'X'),FPS, cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), 1); 
 
 	pCam->StartCapture();
 
@@ -138,31 +138,33 @@ int main(int argc, char *argv[])
 			sprintf( buff, "%d", nFramesPerSecond );
 			if (record == true )
 			{
+
+				/* need to create ring buffer not short circuit static one
 				if (damnCount >= bufSize)
 				{
 					key = 32;
 					cout << " -BUFFER FULL- ";
-				}
+				}*/
 				if (movInit == true)
 				{
+					//int iSize = sizeof *image;
+					//cout << "SizeOf image is: " << iSize <<endl;
+					
+					
 					
 
-					int iSize = sizeof *image;
-					cout << "SizeOf image is: " << iSize <<endl;
-					
-					
-					char * pImage=image->imageData; //POINTER TO IMAGEDATA memory place !
-
-					
+					// Create new memory location for image, need to prealocate this in a ring buffer
 					PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8]; 
-					//char *id = image->imageData;
+					
+					// copy data from imageData pointer to pBuffer
 					memcpy(pBuffer,image->imageData,image->imageSize);
+					//push onto our ring buffer
 					ringBuf.push_back(pBuffer);
 					
 
 					// write other avi and clean up
-					cvWriteFrame(aviOut2, image);
-					cout << "."<<damnCount<<".";
+					//cvWriteFrame(aviOut2, image);
+					//cout << "."<<damnCount<<".";
 					damnCount++;
 				}
 				else
@@ -181,10 +183,15 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
+					// Need some way to sleep .5 seconds or so to get complete swing
+					//
 					record = false;
 					recordStarted = false;
 					movInit = false;
 					cout << "Attemting to create video "<<endl;
+
+					// create ffmpeg video writer
+
 					CvVideoWriter* aviOut = cvCreateVideoWriter("output.avi", CV_FOURCC('D', 'I', 'V', 'X'),FPS, cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), 1); 
 	
 					// try to pull images out of ring buffer
@@ -196,32 +203,34 @@ int main(int argc, char *argv[])
 
 					for (unsigned int i = 0;i < ringBuf.size();i++)
 					{
-						cout << "Writing frame: " << i << " buffer size is: "<< ringBuf.size() <<"  ..." <<endl;
+						//cout << "Writing frame: " << i << " buffer size is: "<< ringBuf.size() <<"  ..." <<endl;
 						//ringBuf.Read((PBYTE &)image->imageData);
 						int rSize = sizeof ringBuf[i];
 						if (rSize > 0)
 						{
-							cout << "SizeOf vector object is: " << rSize << endl;
-							//IplImage img2 = *ringBuf[i];
-							//cout << "actual ring buffer object: " << img2->imageSize << endl;
-							//cout << "actual ring buffer object: " << ringBuf[i] << endl;
+							//cout << "SizeOf vector object is: " << rSize << endl;
+							
+							// Create image, not sure if I need to dealocate this each iteration or not, may be faster not to.
 							IplImage *img2 = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);;
+							
+							// copy data 
 							memcpy(img2->imageData,ringBuf[i],image->imageSize);
+							
+							// write frame to video
 							cvWriteFrame(aviOut, img2);
 
-							//should break
+							//release image, may not be nessisary
 							cvReleaseImage(&img2);
-							//cvShowImage(window_name, &ringBuf[i]);
-							//cvReleaseImage(img2);
+							
 						}
-						// should break
-						//cvReleaseImage(&image);
+						
 					}	
+					// clear vector, need to change to ring buffer
 					ringBuf.clear();
 					damnCount = 0;
-					cout << endl << "Releasing video writer, should flush file write, buffer size is: "<< damnCount <<"  ..." << endl;
+					//cout << endl << "Releasing video writer, should flush file write, buffer size is: "<< damnCount <<"  ..." << endl;
 					cvReleaseVideoWriter(&aviOut);
-					cvReleaseVideoWriter(&aviOut2);
+					//cvReleaseVideoWriter(&aviOut2);
 				}
 			}
 
