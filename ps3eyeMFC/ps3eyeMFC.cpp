@@ -118,7 +118,9 @@ int main(int argc, char *argv[])
 
 	//ESC to quit
 	int damnCount = 0;
-	PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8]; 
+	
+	int maxX = (CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8;
+	
 	while(key != 0x1b)
 	{
 		DWORD dwTimeStart=GetTickCount();
@@ -143,22 +145,22 @@ int main(int argc, char *argv[])
 				}
 				if (movInit == true)
 				{
-					// move write frame to end when buffer is full.
 					
-					
-					
-					// expiriment to write 3 seconds of video to ring buffer then quit
-			
-					//damnCount = ringBuf.Write((PBYTE &)image->imageData,ringBuf.get_countUsed()+1);
-					//memcpy(image->imageData, pBuffer, image->imageSize); 
-					//memcpy(pBuffer,image->imageData,image->imageSize);
+
 					int iSize = sizeof *image;
 					cout << "SizeOf image is: " << iSize <<endl;
-					//IplImage img2 = cvCloneImage(image);
-					//char *foo = image->imageData;
-					char *id = image->imageData;
-					ringBuf.push_back(*id.data());
-					//cvReleaseImage(&img2);
+					
+					
+					char * pImage=image->imageData; //POINTER TO IMAGEDATA memory place !
+
+					
+					PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8]; 
+					//char *id = image->imageData;
+					memcpy(pBuffer,image->imageData,image->imageSize);
+					ringBuf.push_back(pBuffer);
+					
+
+					// write other avi and clean up
 					cvWriteFrame(aviOut2, image);
 					cout << "."<<damnCount<<".";
 					damnCount++;
