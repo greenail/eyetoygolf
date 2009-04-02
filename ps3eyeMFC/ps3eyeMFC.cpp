@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
 
 	// my attempt at a "ring buffer"
 	int bufSize = 200;
-	vector<IplImage> ringBuf(0);
+	vector<uchar*> ringBuf(0);
 
 	cout<< "Ring Buffer size is: "<< bufSize<<" "<<endl;
 	// end expiriment
@@ -154,7 +154,8 @@ int main(int argc, char *argv[])
 					int iSize = sizeof *image;
 					cout << "SizeOf image is: " << iSize <<endl;
 					//IplImage img2 = cvCloneImage(image);
-					ringBuf.push_back(*image);
+					//char *foo = image->imageData;
+					ringBuf.push_back((uchar*)(image->imageData));
 					//cvReleaseImage(&img2);
 					cvWriteFrame(aviOut2, image);
 					cout << "."<<damnCount<<".";
@@ -184,7 +185,11 @@ int main(int argc, char *argv[])
 	
 					// try to pull images out of ring buffer
 					
+					//IplImage *image = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);
+					
+
 					cout << "Trying to write video from ring buffer, buffer size is: "<< ringBuf.size() <<"  ..." <<endl;
+
 					for (unsigned int i = 0;i < ringBuf.size();i++)
 					{
 						cout << "Writing frame: " << i << " buffer size is: "<< ringBuf.size() <<"  ..." <<endl;
@@ -196,7 +201,12 @@ int main(int argc, char *argv[])
 							//IplImage img2 = *ringBuf[i];
 							//cout << "actual ring buffer object: " << img2->imageSize << endl;
 							//cout << "actual ring buffer object: " << ringBuf[i] << endl;
-							cvWriteFrame(aviOut, &ringBuf[i]);
+							IplImage *img2 = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);;
+							memcpy(img2->imageData,ringBuf[i],image->imageSize);
+							cvWriteFrame(aviOut, img2);
+
+							//should break
+							cvReleaseImage(&img2);
 							//cvShowImage(window_name, &ringBuf[i]);
 							//cvReleaseImage(img2);
 						}
