@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 
 	int rate = 0;       
 
-	IplImage *image = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);
+	
 
 	char* window_name = "Capture using IPS3EyeLib";
 
@@ -122,6 +122,7 @@ int main(int argc, char *argv[])
 	while(key != 0x1b)
 	{
 		DWORD dwTimeStart=GetTickCount();
+		IplImage *image = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);
 		if(pCam->GetFrame((PBYTE)image->imageData, COLOR_DEPTH, false, true))
 		{
 			
@@ -155,7 +156,8 @@ int main(int argc, char *argv[])
 					cout << "SizeOf image is: " << iSize <<endl;
 					//IplImage img2 = cvCloneImage(image);
 					//char *foo = image->imageData;
-					ringBuf.push_back((uchar*)(image->imageData));
+					char *id = image->imageData;
+					ringBuf.push_back(*id.data());
 					//cvReleaseImage(&img2);
 					cvWriteFrame(aviOut2, image);
 					cout << "."<<damnCount<<".";
@@ -235,7 +237,7 @@ int main(int argc, char *argv[])
 			
 			
 			key = cvWaitKey(1);
-			
+			cvReleaseImage(&image);
 		}
 	}
 	//cout << ringBuf.get_countUsed() <<endl;
@@ -255,7 +257,7 @@ int main(int argc, char *argv[])
 
 	cvDestroyWindow(window_name);
 
-	cvReleaseImage(&image);
+	//cvReleaseImage(&image);
 
 
 
