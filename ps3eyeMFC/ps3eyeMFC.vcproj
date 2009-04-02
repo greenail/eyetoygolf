@@ -176,7 +176,15 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\Fourier.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ps3eyeMFC.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Recorder.cpp"
 				>
 			</File>
 			<File
@@ -210,11 +218,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Fourier.h"
+				>
+			</File>
+			<File
 				RelativePath=".\IPS3EyeLib.h"
 				>
 			</File>
 			<File
 				RelativePath=".\ps3eyeMFC.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Recorder.h"
 				>
 			</File>
 			<File
@@ -226,11 +242,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\SpectrumGraph.h"
+				>
+			</File>
+			<File
 				RelativePath=".\stdafx.h"
 				>
 			</File>
 			<File
 				RelativePath=".\targetver.h"
+				>
+			</File>
+			<File
+				RelativePath=".\waveInFFTDlg.h"
 				>
 			</File>
 		</Filter>
@@ -241,6 +265,10 @@
 			>
 			<File
 				RelativePath=".\ps3eyeMFC.rc"
+				>
+			</File>
+			<File
+				RelativePath=".\res\waveInFFT.ico"
 				>
 			</File>
 		</Filter>
