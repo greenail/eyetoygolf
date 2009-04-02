@@ -24,6 +24,16 @@
 
 #include <highgui.h>
 #include "IPS3EyeLib.h"
+
+// put in wave fft crap
+
+//#include "waveInFFT.h"
+#include "waveInFFTDlg.h"
+#include "fourier.h"
+#include <math.h>
+#include ".\waveinfftdlg.h"
+
+
 #pragma comment(lib,"cv.lib")
 #pragma comment(lib,"cxcore.lib")
 #pragma comment(lib,"highgui.lib")
@@ -46,6 +56,103 @@
 
 
 using namespace std;
+
+#define mag_sqrd(re,im) (re*re+im*im)
+#define Decibels(re,im) ((re == 0 && im == 0) ? (0) : 10.0 * log10(double(mag_sqrd(re,im))))
+#define Amplitude(re,im,len) (GetFrequencyIntensity(re,im)/(len))
+#define AmplitudeScaled(re,im,len,scale) ((int)Amplitude(re,im,len)%scale)
+
+BOOL Process(void* lpData, LPWAVEHDR pwh)
+{
+#define FFT_LEN 2048
+	double finleft[FFT_LEN/2],finright[FFT_LEN/2],fout[FFT_LEN],foutimg[FFT_LEN],fdraw[FFT_LEN/2];
+	DWORD nCount = 0;
+	for (DWORD dw = 0; dw < FFT_LEN; dw++)
+	{
+		{
+			//copy audio signal to fft real component for left channel
+			finleft[nCount] = (double)((short*)pwh->lpData)[dw++];
+			//copy audio signal to fft real component for right channel
+			finright[nCount++] = (double)((short*)pwh->lpData)[dw];
+		}
+	}
+	//Perform FFT on left channel
+	/*  don't need left channel for decible measure...
+
+	fft_double(FFT_LEN/2,0,finleft,NULL,fout,foutimg);
+	float re,im,fmax=-99999.9f,fmin=99999.9f;
+	for(int i=1;i < FFT_LEN/4;i++)//Use FFT_LEN/4 since the data is mirrored within the array.
+	{
+		re = (float)fout[i];
+		im = (float)foutimg[i];
+		//get amplitude and scale to 0..256 range
+		//fdraw[i]=AmplitudeScaled(re,im,FFT_LEN/2,256);
+		fdraw[i] = ((int)mag_sqrd(re,im))%256;
+		if (fdraw[i] > fmax)
+		{
+			fmax = (float)fdraw[i];
+		}
+		if (fdraw[i] < fmin)
+		{
+			fmin = (float)fdraw[i];
+		}
+	}
+	//Use this to send the average band amplitude to something
+	int nAvg, nBars=16, nCur = 0;
+	for(int i=1;i < FFT_LEN/4;i++)
+	{
+		nAvg = 0;
+		for (int n=0; n < nBars; n++)
+		{
+			nAvg += (int)fdraw[i];
+		}
+		nAvg /= nBars;
+		//Send data here to something,
+		//nothing to send it to so we print it.
+		TRACE("Average for Bar#%d is %d\n",nCur++,nAvg);
+		i+=nBars-1;
+	}
+	*/
+	
+	
+	// Perform FFT on right channel
+	//fmax=-99999.9f,fmin=99999.9f;
+	fft_double(FFT_LEN/2,0,finright,NULL,fout,foutimg);
+	float re,im,fmax=-99999.9f,fmin=99999.9f;
+	fdraw[0] = fdraw[FFT_LEN/4] = 0;
+	double decibelLevel = 0;
+	for(int i=1;i < FFT_LEN/4;i++)//Use FFT_LEN/4 since the data is mirrored within the array.
+	{
+		re = (float)fout[i];
+		im = (float)foutimg[i];
+		//get Decibels in 0-110 range
+		decibelLevel = Decibels(re,im);
+		fdraw[i] = Decibels(re,im);
+		if (fdraw[i] > fmax)
+		{
+			fmax = (float)fdraw[i];
+		}
+		if (fdraw[i] < fmin)
+		{
+			fmin = (float)fdraw[i];
+		}
+	}
+	// Detect Decibel level above threashold
+	if (decibelLevel > 70)
+	{
+		cout<< "Decible Hit!!!!!!!!!!!!!!!"<<endl;
+		
+	}
+	return TRUE;
+	/*else
+	{
+		return false;
+	}
+	*/
+}
+
+
+
 void displayAvailableFormats(void);
 
 
@@ -128,6 +235,8 @@ int main(int argc, char *argv[])
 	
 	//int maxX = (CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8;
 	IplImage *image = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);
+	DataHolder m_data;
+	Recorder m_rec;
 	while(key != 0x1b)
 	{
 		DWORD dwTimeStart=GetTickCount();
@@ -157,8 +266,9 @@ int main(int argc, char *argv[])
 					//int iSize = sizeof *image;
 					//cout << "SizeOf image is: " << iSize <<endl;
 					
-					
-					
+					m_rec.Open();
+					m_rec.SetBufferFunction((void*)&m_data,Process);
+					m_rec.Start();
 
 					// Create new memory location for image, need to prealocate this in a ring buffer
 					//PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8]; 
@@ -206,6 +316,7 @@ int main(int argc, char *argv[])
 					record = false;
 					recordStarted = false;
 					movInit = false;
+					m_rec.Stop();
 					cout << "Attemting to create video writer"<<endl;
 
 					// create ffmpeg video writer
@@ -329,5 +440,6 @@ void displayAvailableFormats(void)
 
 	}
 } 
+
 
 
