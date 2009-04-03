@@ -77,113 +77,66 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter);
 int main(int argc, char *argv[])
 
 {
-
+	// key to toggle recording
 	int key = 0;
 	int lastkey = 0;
-
 	int rate = 0;       
-
-	
-
+	// opencv window
 	char* window_name = "Capture using IPS3EyeLib";
-
 	cvNamedWindow(window_name, CV_WINDOW_AUTOSIZE);
-
-
-	IPS3EyeLib *pCam = IPS3EyeLib::Create();
-
-
-
-	displayAvailableFormats();
-	pCam->SetFormat(IPS3EyeLib::GetFormatIndex(CAPTURE_WIDTH,CAPTURE_HEIGHT,FPS));
-	//PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8];
-
-	//CvVideoWriter* aviOut2 = NULL;
-	//CvVideoWriter* aviOut2 = cvCreateVideoWriter("output2.avi", CV_FOURCC('D', 'I', 'V', 'X'),FPS, cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), 1); 
-
-	pCam->StartCapture();
-
-	bool record = false;
-	//start time
-	//count << "Increment for GetTick " <<GetSystemTimeAdjustment()<<endl;
-
-
-	// setup fps string
+	// FPS draw crap
 	CvFont font;
 	double hScale=1.0;
 	double vScale=1.0;
 	int    lineWidth=1;
 	cvInitFont(&font,CV_FONT_HERSHEY_SIMPLEX|CV_FONT_ITALIC, hScale,vScale,0,lineWidth);
-
-
-
-
-	
+	// control stuff
 	bool recordStarted = false;
 	bool movInit = false;
 	bool threadStarted = false;
+	bool record = false;
+	// thread stuff
 	DWORD dwThreadID;
-	HANDLE hThread;
-	// expiriment create buffer to store 300 frames, or 3 seconds
-
-	
-	// note copy each flat is true, may be slow...
-
-	//CCircularBuffer< IplImage, 300,true > ringBuf;
+	HANDLE hThread = NULL;
 
 	cout<< "Creating ring buffer "<<endl;
-	//
-	// my attempt at a "ring buffer"
 	int bufSize = 200;
-	//vector<uchar*> ringBuf(0);
 	CCircularBuffer< uchar*, 200 > ringBuf;
-
 	cout<< "Ring Buffer size is: "<< bufSize<<" "<<endl;
-
 	cout << "Pre allocating memory for video" << endl;
 	for (int i = 0; i < bufSize;i++)
 	{
-		PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8]; 
-		ringBuf.Write(pBuffer);
+		PBYTE tempBuf=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8]; 
+		ringBuf.Write(tempBuf);
 	}
-	// end expiriment
-	
-
-	//ESC to quit
-	int damnCount = 0;
-	
-	//int maxX = (CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8;
+	// Initialize our image, destroyed after main loop exits.
 	IplImage *image = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);
 	
-	/* moved to thread
-	DataHolder m_data;
-	Recorder m_rec;
-	*/
+	// FPS stuff
 	double		m_timePrevFrameStamp = 0;
 	double		m_timeCurrFrameStamp = 0;
 	double		m_nFps = 0.1;
 	double		m_nFpsAlpha = 0.1;
 	struct timeb timeStamp;
+	// buffer for printing FPS
 	char buff[128];
-	
+	// create copy buffer
+	PBYTE pBuffer = NULL;
+	// fire up the eyetoy
+	IPS3EyeLib *pCam = IPS3EyeLib::Create();
+	displayAvailableFormats();
+	pCam->SetFormat(IPS3EyeLib::GetFormatIndex(CAPTURE_WIDTH,CAPTURE_HEIGHT,FPS));
+	pCam->StartCapture();
+	//ESC to quit
 	while(key != 0x1b)
 	{
+		// for FPS display
 		DWORD dwTimeStart=GetTickCount();
-		//IplImage *image = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);
 		if(pCam->GetFrame((PBYTE)image->imageData, COLOR_DEPTH, false, true))
 		{
-			/* new FPS display code below
-			long fTimeDifference=GetTickCount()-dwTimeStart;         
-			
-			int nFramesPerSecond =(int)(1000.f/fTimeDifference);
-			//int nFramesPerSecond=1000/fTimeDifference;
-			sprintf( buff, "%d", nFramesPerSecond );
-			*/
+			// calculate FPS
 			ftime( &timeStamp );
-
 			m_timeCurrFrameStamp = (double) timeStamp.time*1000 + timeStamp.millitm;
-			//m_timeCurrFrameStamp = m_pWorker->GetTime( );
-			// update fps
 			if( m_nFps < 0 )
 			{
 				m_nFps = 1000 / ( m_timeCurrFrameStamp - m_timePrevFrameStamp );
@@ -194,26 +147,13 @@ int main(int argc, char *argv[])
 			}
 			// set current time stamp as previuos
 			m_timePrevFrameStamp = m_timeCurrFrameStamp;
-			//sprintf( buff, "%d", m_nFps );
 			sprintf(buff, "FPS: %5.1f", m_nFps );
-
+			// do recording fun stuff
 			if (record == true )
 			{
-
-				
 				if (movInit == true)
 				{
-					//int iSize = sizeof *image;
-					//cout << "SizeOf image is: " << iSize <<endl;
-					
-					/* moved to thread
-					m_rec.Open();
-					m_rec.SetBufferFunction((void*)&m_data,Process);
-					m_rec.Start();
-					*/
-					
-
-					if (threadStarted == false)
+					if (hThread == NULL)
 						{
 						// start thread
 						cout<< "Create thread to listen for sound trigger"<<endl;
@@ -224,44 +164,33 @@ int main(int argc, char *argv[])
 					else
 					{
 						//check to see if the listener thread stopped because it found a sound
-						DWORD ret = WaitForSingleObject(hThread,0);
+						DWORD ret = WaitForSingleObject(hThread,1);
 						if (ret != WAIT_TIMEOUT )
 							{
 							key = 32;
+							threadStarted = false;
 							}
 					}
-					// Create new memory location for image, need to prealocate this in a ring buffer
-					//PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8]; 
 					
-					PBYTE pBuffer = NULL;
-					
+
+					// for some reason need to read to pop off of ring buffer, may be a better way to do this
+					cout<< "?";
 					ringBuf.Read(pBuffer);
 					if ((int)ringBuf.get_countUsed() < (int)ringBuf.get_maxItems()){cout << "-" ;}
-
 					// copy data from imageData pointer to pBuffer
 					memcpy(pBuffer,image->imageData,image->imageSize);
 					//push onto our ring buffer
-					
-					//ringBuf.push_back(pBuffer);
+					cout<< "+";
 					ringBuf.Write(pBuffer);
-					if ((int)ringBuf.get_countUsed() < (int)ringBuf.get_maxItems()){cout << "." ;}
-
-
-					// write other avi and clean up
-					//cvWriteFrame(aviOut2, image);
-					//cout << "."<<damnCount<<".";
-
-					//delete pointer?
-					//delete pBuffer;
-					damnCount++;
+					
 				}
 				else
 				{
-					
+					// not sure why I have this, maybe so I can setup the video writer each time.
 					movInit = true;
 				}
 			}
-			// SPace key to record
+			// SPace key to record, can be driven by sound
 			if (key == 32)
 			{
 				record = true;
@@ -271,109 +200,66 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
-					// Need some way to sleep .5 seconds or so to get complete swing
-					//
+					// Pull data out and save it to file
 					record = false;
 					recordStarted = false;
 					movInit = false;
 					threadStarted = false;
-
-					// kill thread
-
+					// close thread handle
 					CloseHandle(hThread);
-
-
-					// need to send thread stop msg
-					// m_rec.Stop();
+					// make sure it is null
+					hThread = NULL;
 					cout << "Attemting to create video writer"<<endl;
-
 					// create ffmpeg video writer
-
 					CvVideoWriter* aviOut = cvCreateVideoWriter("output.avi", CV_FOURCC('D', 'I', 'V', 'X'),30, cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), 1); 
-	
-					// try to pull images out of ring buffer
-					
-					//IplImage *image = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);
-					
-
 					cout << "Trying to write video from ring buffer, buffer size is: "<< ringBuf.get_countUsed() <<"  ..." <<endl;
-
-					//for (unsigned int i = 0;i < ringBuf.size();i++)
-					int bufCount = ringBuf.get_countUsed();
+					// create image buffer
+					IplImage *img2 = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);;
+					int bufCount = ringBuf.get_countUsed();	
 					for (int i = 0 ; i < bufCount ; i++)
 					{
-						//cout << "Writing frame: " << i << " buffer size is: "<< ringBuf.size() <<"  ..." <<endl;
-						//ringBuf.Read((PBYTE &)image->imageData);
-						//int rSize = sizeof ringBuf[i];
-						//cout << "SizeOf vector object is: " << rSize << endl;
-							
-						// Create image, not sure if I need to dealocate this each iteration or not, may be faster not to.
-						IplImage *img2 = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);;
-							
 						// copy data 
 						uchar * iPointer = NULL;
 						ringBuf.Read(iPointer);
-						cout << "Read: "<< &iPointer<< " with count: "<< ringBuf.get_countUsed() <<"  ..." <<endl;
+						//cout << "Read: "<< ringBuf.get_countUsed() <<"of "<< bufCount<<"..";
 						memcpy(img2->imageData,iPointer,image->imageSize);
-							
 						// write frame to video
 						cvWriteFrame(aviOut, img2);
-						//delete [] iPointer;
-						//release image, may not be nessisary
-						cvReleaseImage(&img2);
-							
-						
-						
 					}	
-					// clear vector, need to change to ring buffer
-					//ringBuf.clear();
-					damnCount = 0;
-					//cout << endl << "Releasing video writer, should flush file write, buffer size is: "<< damnCount <<"  ..." << endl;
+					// hack to refill buffer
+					for (int i = 0; i < bufSize;i++)
+						{
+							PBYTE tempBuf=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8]; 
+							ringBuf.Write(tempBuf);
+						}
+
+					cvReleaseImage(&img2);
 					cvReleaseVideoWriter(&aviOut);
-					//cvReleaseVideoWriter(&aviOut2);
 				}
 			}
-
-
-
-			
+			/* printing key codes since I don't know them
 			if (key != lastkey)
 			{
 				cout << lastkey<<endl;
 			}
+			*/
+			// record last key stroke for next loop
 			lastkey = key;
+			// Draw FPS data on preview image
 			cvPutText (image,buff,cvPoint(30,30), &font, cvScalar(255,255,0));
+			// draw preview image
 			cvShowImage(window_name, image);
-			
-			
-			
+			// check for next key stroke 1ms delay
 			key = cvWaitKey(1);
-			//cvReleaseImage(&image);
 		}
 	}
-	//cout << ringBuf.get_countUsed() <<endl;
+	// clean up
 	cvReleaseImage(&image);
-
-	// pause for a while
-
-	//key = cvWaitKey(5000);
-
-	//cvReleaseVideoWriter(&aviOut);
 	pCam->StopCapture();
-
 	delete pCam;
-
-
-
-
 	cvDestroyWindow(window_name);
-
-	//cvReleaseImage(&image);
-
-
-
+	// exit
 	return 0;
-
 }
 
 
@@ -423,45 +309,7 @@ BOOL Process(void* lpData, LPWAVEHDR pwh)
 			finright[nCount++] = (double)((short*)pwh->lpData)[dw];
 		}
 	}
-	//Perform FFT on left channel
-	/*  don't need left channel for decible measure...
 
-	fft_double(FFT_LEN/2,0,finleft,NULL,fout,foutimg);
-	float re,im,fmax=-99999.9f,fmin=99999.9f;
-	for(int i=1;i < FFT_LEN/4;i++)//Use FFT_LEN/4 since the data is mirrored within the array.
-	{
-		re = (float)fout[i];
-		im = (float)foutimg[i];
-		//get amplitude and scale to 0..256 range
-		//fdraw[i]=AmplitudeScaled(re,im,FFT_LEN/2,256);
-		fdraw[i] = ((int)mag_sqrd(re,im))%256;
-		if (fdraw[i] > fmax)
-		{
-			fmax = (float)fdraw[i];
-		}
-		if (fdraw[i] < fmin)
-		{
-			fmin = (float)fdraw[i];
-		}
-	}
-	//Use this to send the average band amplitude to something
-	int nAvg, nBars=16, nCur = 0;
-	for(int i=1;i < FFT_LEN/4;i++)
-	{
-		nAvg = 0;
-		for (int n=0; n < nBars; n++)
-		{
-			nAvg += (int)fdraw[i];
-		}
-		nAvg /= nBars;
-		//Send data here to something,
-		//nothing to send it to so we print it.
-		TRACE("Average for Bar#%d is %d\n",nCur++,nAvg);
-		i+=nBars-1;
-	}
-	*/
-	
-	
 	// Perform FFT on right channel
 	fft_double(FFT_LEN/2,0,finright,NULL,fout,foutimg);
 	float re,im,fmax=-99999.9f,fmin=99999.9f;
@@ -491,11 +339,6 @@ BOOL Process(void* lpData, LPWAVEHDR pwh)
 		
 	}
 	return TRUE;
-	/*else
-	{
-		return false;
-	}
-	*/
 }
 DWORD WINAPI ThreadProc(LPVOID lpParameter) 
 {
@@ -510,8 +353,8 @@ while (running)
 	{
 	if (started == false)
 		{
+		cout<< "Starting recorder"<<endl;
 		m_rec.Open();
-		//running = m_rec.SetBufferFunction((void*)&m_data,Process);
 		m_rec.SetBufferFunction((void*)&m_data,Process);
 		m_rec.Start();
 		started = true;
