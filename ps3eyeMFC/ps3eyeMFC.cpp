@@ -218,9 +218,18 @@ int main(int argc, char *argv[])
 						// start thread
 						cout<< "Create thread to listen for sound trigger"<<endl;
 						LPVOID pRecord = &record;
-						hThread = CreateThread(0,0,ThreadProc,pRecord,0,&dwThreadID);
+						hThread = CreateThread(0,0,ThreadProc,pRecord,record,&dwThreadID);
 						threadStarted = true;
 						}
+					else
+					{
+						//check to see if the listener thread stopped because it found a sound
+						DWORD ret = WaitForSingleObject(hThread,0);
+						if (ret != WAIT_TIMEOUT )
+							{
+							key = 32;
+							}
+					}
 					// Create new memory location for image, need to prealocate this in a ring buffer
 					//PBYTE pBuffer=new BYTE[(CAPTURE_WIDTH*CAPTURE_HEIGHT*COLOR_DEPTH)/8]; 
 					
@@ -478,6 +487,7 @@ BOOL Process(void* lpData, LPWAVEHDR pwh)
 	if (decibelLevel > 70)
 	{
 		cout<< "Decible Hit!!!!!!!!!!!!!!!"<<endl;
+		return FALSE;
 		
 	}
 	return TRUE;
@@ -490,6 +500,7 @@ BOOL Process(void* lpData, LPWAVEHDR pwh)
 DWORD WINAPI ThreadProc(LPVOID lpParameter) 
 {
 bool running = TRUE;
+bool started = false;
 DataHolder m_data;
 Recorder m_rec;
 while (running)
@@ -497,12 +508,33 @@ while (running)
 	Sleep(2);
 	if (lpParameter)
 	{
-	m_rec.Open();
-	m_rec.SetBufferFunction((void*)&m_data,Process);
-	m_rec.Start();
+	if (started == false)
+		{
+		m_rec.Open();
+		//running = m_rec.SetBufferFunction((void*)&m_data,Process);
+		m_rec.SetBufferFunction((void*)&m_data,Process);
+		m_rec.Start();
+		started = true;
+		}
+	else
+		{
+		bool recording = m_rec.IsRecording();
+		if (recording)
+			{
+			m_rec.SetBufferFunction((void*)&m_data,Process);
+			m_rec.Start();
+			}
+		else
+			{
+			cout<<"Sound listener stopped"<<endl;
+			m_rec.Stop();
+			running = FALSE;
+			}
+		}
 	}
 	else
 	{
+		cout<<"Sound listener stopped"<<endl;
 		m_rec.Stop();
 		running = FALSE;
 	}

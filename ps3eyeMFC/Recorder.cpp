@@ -242,7 +242,14 @@ BOOL Recorder::IsDeviceOpen()
 void Recorder::ProcessNextBuffer(LPWAVEHDR pwh)
 {
 	if (fnProcessBuffer != NULL)
-		fnProcessBuffer(m_lpData,pwh);
+	{
+		bool test = fnProcessBuffer(m_lpData,pwh);
+		if (test == false)
+		{
+		Recorder::Stop();
+		//cout<<" Recorder stopped process returned false"<<endl;
+		}
+	}
 	waveInUnprepareHeader(m_hWaveIn, pwh, sizeof(WAVEHDR));
 	waveInPrepareHeader (m_hWaveIn, pwh, sizeof(WAVEHDR));
 	waveInAddBuffer(m_hWaveIn, pwh, sizeof(WAVEHDR));

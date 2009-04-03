@@ -44,6 +44,16 @@ public:
 	void SetFormat(WORD wBitsPerSample,WORD wChannels,DWORD dwSampleRate);
 	BOOL IsRecording();
 	BOOL IsDeviceOpen();
+	/* borked
+	BOOL SetBufferFunction(void* lpData, ProcessBuffer fnProcess) 
+	{ 
+		bool foundSound = false;
+		m_lpData = lpData;
+		foundSound = fnProcess; 
+		return foundSound;
+	}
+	*/
+	//BOOL SetBufferFunction(void* lpData, ProcessBuffer fnProcess) {m_lpData = lpData,fnProcessBuffer = fnProcess;}
 	void SetBufferFunction(void* lpData, ProcessBuffer fnProcess) { m_lpData = lpData, fnProcessBuffer = fnProcess; }
 	DWORD GetPosition();
 	BOOL Pause();
