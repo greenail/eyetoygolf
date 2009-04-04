@@ -48,13 +48,16 @@
 
 
 #define CAPTURE_WIDTH  320 
-
 #define CAPTURE_HEIGHT 240 
-
 #define FPS             100 
-
 #define COLOR_DEPTH     24 
 
+/*
+#define CAPTURE_WIDTH  640 
+#define CAPTURE_HEIGHT 480 
+#define FPS             50
+#define COLOR_DEPTH     24 
+*/
 
 
 using namespace std;
@@ -164,7 +167,7 @@ int main(int argc, char *argv[])
 					else
 					{
 						//check to see if the listener thread stopped because it found a sound
-						DWORD ret = WaitForSingleObject(hThread,1);
+						DWORD ret = WaitForSingleObject(hThread,0);
 						if (ret != WAIT_TIMEOUT )
 							{
 							key = 32;
@@ -174,13 +177,13 @@ int main(int argc, char *argv[])
 					
 
 					// for some reason need to read to pop off of ring buffer, may be a better way to do this
-					cout<< "?";
+					//cout<< "?";
 					ringBuf.Read(pBuffer);
-					if ((int)ringBuf.get_countUsed() < (int)ringBuf.get_maxItems()){cout << "-" ;}
+					//if ((int)ringBuf.get_countUsed() < (int)ringBuf.get_maxItems()){cout << "-" ;}
 					// copy data from imageData pointer to pBuffer
 					memcpy(pBuffer,image->imageData,image->imageSize);
 					//push onto our ring buffer
-					cout<< "+";
+					//cout<< "+";
 					ringBuf.Write(pBuffer);
 					
 				}
@@ -211,7 +214,7 @@ int main(int argc, char *argv[])
 					hThread = NULL;
 					cout << "Attemting to create video writer"<<endl;
 					// create ffmpeg video writer
-					CvVideoWriter* aviOut = cvCreateVideoWriter("output.avi", CV_FOURCC('D', 'I', 'V', 'X'),30, cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), 1); 
+					CvVideoWriter* aviOut = cvCreateVideoWriter("output.avi", CV_FOURCC('P','I','M','1'),30, cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), 1); 
 					cout << "Trying to write video from ring buffer, buffer size is: "<< ringBuf.get_countUsed() <<"  ..." <<endl;
 					// create image buffer
 					IplImage *img2 = cvCreateImage(cvSize(CAPTURE_WIDTH, CAPTURE_HEIGHT), IPL_DEPTH_8U, 3);;
@@ -225,6 +228,8 @@ int main(int argc, char *argv[])
 						memcpy(img2->imageData,iPointer,image->imageSize);
 						// write frame to video
 						cvWriteFrame(aviOut, img2);
+						// free memory
+						delete [] iPointer;
 					}	
 					// hack to refill buffer
 					for (int i = 0; i < bufSize;i++)
@@ -235,6 +240,17 @@ int main(int argc, char *argv[])
 
 					cvReleaseImage(&img2);
 					cvReleaseVideoWriter(&aviOut);
+					const char * mboxMsg = "Do you want to save and view this swing?";
+					CStringW wName( mboxMsg ); 
+					/* Need to do this in a thread... PITA
+					DWORD mRes =  MessageBox(NULL, wName, wName, MB_OK);
+					if (mRes == IDOK)
+						{
+						// button ok has been pressed
+						}
+					*/
+					//start recording again....
+					record = true;
 				}
 			}
 			/* printing key codes since I don't know them
@@ -268,7 +284,7 @@ int main(int argc, char *argv[])
 void displayAvailableFormats(void)
 
 {
-	cout << "version .01" <<endl;
+	cout << "version .02" <<endl;
 	cout <<"[Available Formats]" <<endl;
 
 	for(int i=0; i<IPS3EyeLib::GetNumFormats(); i++)
@@ -335,6 +351,7 @@ BOOL Process(void* lpData, LPWAVEHDR pwh)
 	if (decibelLevel > 70)
 	{
 		cout<< "Decible Hit!!!!!!!!!!!!!!!"<<endl;
+		Sleep(500);
 		return FALSE;
 		
 	}
@@ -348,7 +365,7 @@ DataHolder m_data;
 Recorder m_rec;
 while (running)
 {
-	Sleep(2);
+	Sleep(4);
 	if (lpParameter)
 	{
 	if (started == false)

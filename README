@@ -8,7 +8,9 @@ File saved as output.avi in current directory
 
 TODO:
 
-add listener to start capture based on impact sound
-add gui elements, setup etc.
-add player to step through video
-add overlay lines to viewer
+make overlay for lines and boxes
+make player for replay
+DONE add listener to start capture based on impact sound
+DONE add gui elements, setup etc.
+DONE add player to step through video
+DONE add overlay lines to viewer
