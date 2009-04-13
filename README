@@ -1,16 +1,11 @@
 
 Attempt to make a high speed video capture app for native ps3eye interface developed at nuigroup.com
 
-<ESC> to quit
-<SPACE> to record
-
-File saved as output.avi in current directory
 
 TODO:
 
-make overlay for lines and boxes
-make player for replay
-DONE add listener to start capture based on impact sound
-DONE add gui elements, setup etc.
-DONE add player to step through video
-DONE add overlay lines to viewer
+add playback controls
+
+re-add save to video
+
+add overlay lines and boxes
