@@ -32,9 +32,10 @@
 //#include "waveInFFT.h"
 #include "waveInFFTDlg.h"
 #include "fourier.h"
+#include "recorder.h"
 #include <math.h>
-#include ".\waveinfftdlg.h"
-
+//#include ".\waveinfftdlg.h"
+  
 
 #pragma comment(lib,"cv.lib")
 #pragma comment(lib,"cxcore.lib")
@@ -361,6 +362,11 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter)
 {
 bool running = TRUE;
 bool started = false;
+struct DataHolder
+{
+	void* pData;
+	void* pData2;
+};
 DataHolder m_data;
 Recorder m_rec;
 while (running)
@@ -386,7 +392,7 @@ while (running)
 			}
 		else
 			{
-			cout<<"Sound listener stopped"<<endl;
+			cout<<"Sound listener stopped recording stopped"<<endl;
 			m_rec.Stop();
 			running = FALSE;
 			}
