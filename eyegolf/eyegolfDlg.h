@@ -6,6 +6,7 @@
 #include "afxwin.h"
 #include "IPS3EyeLib.h"
 #include "CircularBuffer.h"
+#include "AviFile.h"
 
 //#include "waveInFFTDlg.h"
 #include "fourier.h"
@@ -65,6 +66,7 @@ public:
 	void ThreadProc();
 	void ThreadPlaybackProc();
 	void ThreadSoundRecordProc();
+	void CeyegolfDlg::CopyBuffer();
 	static DWORD WINAPI ThreadStub(LPVOID p);
 	static DWORD WINAPI ThreadPlaybackStub(LPVOID p);
 	static DWORD WINAPI ThreadSoundRecordStub(LPVOID p);

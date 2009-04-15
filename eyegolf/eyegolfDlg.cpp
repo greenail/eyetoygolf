@@ -184,7 +184,7 @@ BOOL CeyegolfDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
-	//ShowWindow(SW_MAXIMIZE);
+	ShowWindow(SW_MAXIMIZE);
 
 	// TODO: Add extra initialization here
 	
@@ -330,7 +330,11 @@ void CeyegolfDlg::OnBnClickedSetCamOptionBtn()
 	cout << "Stopping current Capture to reset resolution"<<endl;
 	if (pCam->IsCapturing())
 	{
-		pCam->StopCapture();
+		cout<< "Stopping Camera Capture"<<endl;
+		// stop recording
+		pRecordToggle = false;
+		DWORD ret = WaitForSingleObject(hThread,INFINITE);
+		pRecordToggle = true;
 	}
 	int selected = m_cameraOption.GetCurSel();
 	cout << "Setting format index to: " << selected <<endl;
@@ -343,7 +347,7 @@ void CeyegolfDlg::OnBnClickedSetCamOptionBtn()
 		pCam->SetFormat(0);
 	}
 	// start capture and setup bitmap and buffer
-	pCam->StartCapture();
+	
 	width       = IPS3EyeLib::GetFormats()[selected].width;
 	height      = IPS3EyeLib::GetFormats()[selected].height;
 	cout << "setting Width Height to: "<<width<<"x"<<height<<endl;
@@ -351,7 +355,7 @@ void CeyegolfDlg::OnBnClickedSetCamOptionBtn()
 	pTempBuf=new BYTE[(width*height*24)/8];
 	hBitmap = CreateBitmap(width,height,24,1);
 	DWORD dwThreadID;
-	DWORD dwSoundRecordThreadID;
+	//DWORD dwSoundRecordThreadID;
 	pRecordToggle = true;
 	
 	// setup ringbuffer
@@ -397,9 +401,9 @@ while(replay)
 		ringBufPlayback.Write(tempBuf);
 		// go into sleep loop to detect impact
 		int sleepTime = 1000/FPS_Playback;
-		for (i = 0;i<sleepTime;i=i+4)
+		for (i = 0;i<sleepTime;i++)
 			{
-			Sleep(4);
+			Sleep(1);
 			if (!replay)
 				{
 				i = 100000;
@@ -407,13 +411,13 @@ while(replay)
 			}
 		}
 }
-cout << "Replay Thread Exiting"<<endl;
+cout << "Video Buffer Replay Thread Exiting"<<endl;
 }
 
 // name sucks need to change it
 void CeyegolfDlg::ThreadProc()
 {
-cout<< "starting thread"<<endl;
+cout<< "Starting Video Capture Thread"<<endl;
 // setup FPS CRAP
 double		m_timePrevFrameStamp = 0;
 double		m_timeCurrFrameStamp = 0;
@@ -421,7 +425,7 @@ double		m_nFps = 0.1;
 double		m_nFpsAlpha = 0.1;
 // counter to print fps every 60 frames
 int stupidCounter = 0;
-
+pCam->StartCapture();
 struct timeb timeStamp;
 while (pRecordToggle)
 {
@@ -451,14 +455,12 @@ if(pCam->GetFrame(pBuffer, 24, false,true))
 		memcpy(pTempBuf,pBuffer,imageSize);
 		//delete[] pTempBuf;
 		ringBuf.Write(pTempBuf);
-		//cout << "USED BUFFER" << ringBuf.countUsed<<endl;
 		stupidCounter++;
 		if (stupidCounter == 60)
 		{
 			cout << m_nFps<<endl;
 			stupidCounter =0;
 		}
-		//cout << l_bytesSet << " Bytes Set"<<endl;
 		int l_bytesSet = SetBitmapBits(hBitmap,(height*width*24)/8,pBuffer);
 		ShowBitmap(hBitmap,0,50);
 		/*  Saving image screws it up, deletes it from mem or something.
@@ -469,20 +471,21 @@ if(pCam->GetFrame(pBuffer, 24, false,true))
 		*/
 			
 		}
-	else
+else
 	{
 		cout<<" Failed to Grab Frame"<<endl;
 		bool c = pCam->IsCapturing();
 		if (!c)
 		{
 			cout << "Capture reset, sleeping"<<endl;
-			Sleep(200);
+			Sleep(500);
 			
 		}
 	}
 
 }
-cout<< "Record Thread Exiting"<<endl;
+pCam->StopCapture();
+cout<< "Video Capture Thread Exiting"<<endl;
 
 }
 void CeyegolfDlg::ThreadSoundRecordProc()
@@ -522,16 +525,14 @@ while (soundRecordRunning)
 		else
 			{
 			cout<<"Sound Trigger detected."<<endl;
-			//m_rec.Stop();
-			PlaybackBuffer();
-			//recording = true;
-			//m_rec.Open();
+			Sleep(500);
+			CopyBuffer();
+			Sleep(1500);
 			m_rec.Close();
 			m_rec.Open();
 			m_rec.SetBufferFunction((void*)&m_data,Process);
 			m_rec.Start();
-			Sleep(200);
-			//soundRecordRunning = FALSE;
+			
 			}
 		
 		}
@@ -603,62 +604,105 @@ bool CeyegolfDlg::ShowBitmap(HBITMAP hbmp,int x, int y)
 
 void CeyegolfDlg::OnBnClickedRecordToggleBtn()
 {
-	// TODO: Add your control notification handler code here
-	pRecordToggle = false;
+	/* reused button
+	//pRecordToggle = false;
 	// stop recording
-	pCam->StopCapture();
-}
-void CeyegolfDlg::PlaybackBuffer()
-{
+	//pCam->StopCapture();
+	*/
 
+	// init temp buffer
+	cout<< "Starting Movie File Creation"<<endl;
+	PBYTE tempBuf;
+	// record video file
+	CAviFile	avi("Output.Avi",mmioFOURCC('M','S','V','C'),30);
+	//stop playback (should stop record also)
+	replay = false;
+	// wait for thread to stop
+	DWORD ret = WaitForSingleObject(hPlaybackThread,INFINITE);
+	replay = true;
+	//iterate through buffer
+	int countUsed = ringBufPlayback.countUsed;
+	cout << "Count Used: " << countUsed<<endl;
+	DWORD position;
+	for (int i = 0 ; i < countUsed ; i++)
+	{
+		//position = ringBufPlayback.Peek((unsigned char**)tempBuf,200);
+
+		position = ringBufPlayback.Read(tempBuf);
+		//unsigned char * tmp = ringBufPlayback.m_pRead;
+		//ringBufPlayback.AdvancePointer(tmp,1);
+		cout << "AVI Position: "<<position<<" count: " << i<<"---";
+		//ringBuf.
+		//cout << "Read: "<< ringBuf.get_countUsed() <<"of "<< bufCount<<"..";
+		HBITMAP hbmp=CreateBitmap(width,height,24,1);
+		int l_bytesSet = SetBitmapBits(hbmp,(height*width*24)/8,tempBuf);
+		if(FAILED(avi.AppendNewFrame(hbmp)))	//avi.AppendNewFrame(320, 240, pBits, 32)))
+			{
+				//append bitmaps
+				cout << "AVI Error: "<< avi.GetLastErrorMessage()<<endl;
+			}
+		ringBufPlayback.Write(tempBuf);
+	}
+	
+
+	//save avi
+	// not sure how it saves...
+	PlaybackBuffer();
+	// restart playback
+	
+}
+void CeyegolfDlg::CopyBuffer()
+{
+cout<< "Stopping Camera Capture"<<endl;
+// stop recording
+pRecordToggle = false;
+DWORD ret = WaitForSingleObject(hThread,INFINITE);
+pRecordToggle = true;
+// wait for thread to stop if already running
 cout<< "Stopping Playback Thread"<<endl;
 replay = false;
-DWORD ret = WaitForSingleObject(hPlaybackThread,INFINITE);
-cout<< "Stopping Camera Capture"<<endl;
+DWORD retu = WaitForSingleObject(hPlaybackThread,INFINITE);
 replay = true;
-// stop recording
-pCam->StopCapture();
-DWORD dwPlaybackThreadID;
+
+
 cout<< "Writing Playback Buffer"<<endl;
 int count = ringBuf.countUsed;
 PBYTE tempBuf;
 PBYTE tempBufPlayback;
 int imageSize = (width*height*24)/8;
 for (int i = 0; i < count;i++)
-{
+	{
 	
 	ringBuf.Read(tempBuf);
 	ringBufPlayback.Read(tempBufPlayback);
-	//cout << "Size of Buffer: "<< count<< " "  << sizeof(*tempBuf)<< " .. " << sizeof(&tempBuf)<<endl;
-	
 	memcpy(tempBufPlayback,tempBuf,imageSize);
 	ringBuf.Write(tempBuf);
 	ringBufPlayback.Write(tempBufPlayback);
+	}
+PlaybackBuffer();
+DWORD dwThreadID;
+cout<<"Starting Video Buffer Thread "<<endl;
+hThread = CreateThread(0,0,ThreadStub,this,true,&dwThreadID);
+
 }
+void CeyegolfDlg::PlaybackBuffer()
+{
+DWORD dwPlaybackThreadID;
 cout<< "Starting Playback Thread"<<endl;
 hPlaybackThread = CreateThread(0,0,ThreadPlaybackStub,this,true,&dwPlaybackThreadID);
-cout<<"Starting Camera Capture"<<endl;
-pCam->StartCapture();
+
+
 }
 void CeyegolfDlg::OnBnClickedPlayBufferBtn()
 {
 	// need to make sure we are not already playing back
+	CopyBuffer();
 	
-	PlaybackBuffer();
 }
 
 void CeyegolfDlg::OnEnChangeFpsEdit()
 {
-	// TODO:  If this is a RICHEDIT control, the control will not
-	// send this notification unless you override the CDialog::OnInitDialog()
-	// function and call CRichEditCtrl().SetEventMask()
-	// with the ENM_CHANGE flag ORed into the mask.
-
-	// TODO:  Add your control notification handler code here
-	cout<<"FPS Changed"<<endl;
-	CString s;
-	FPS_EDIT.GetWindowTextW(s);
-	FPS_Playback = _ttoi(s);
+	
 }
 
 void CeyegolfDlg::OnBnClickedReplayBtn()
@@ -684,7 +728,8 @@ void CeyegolfDlg::OnCbnSelchangeCombo2()
 	int selected = m_Fps_Option.GetCurSel();
 	if (selected != 0)
 	{
-		FPS_Playback = selected * 10;
+		FPS_Playback = selected * 20;
+		cout << "Changed FPS to" << FPS_Playback<<endl;
 	}
 	else
 	{

@@ -94,17 +94,18 @@ EXSTYLE WS_EX_APPWINDOW
 CAPTION "eyegolf"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "Quit",IDOK,7,18,50,10,BS_BOTTOM
+    DEFPUSHBUTTON   "Quit",IDOK,12,15,24,13,BS_BOTTOM
     CTEXT           "ps3eye Swing Capture",IDC_STATIC,475,7,77,8
-    CONTROL         "",IDC_SLIDER1,"msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,18,357,183,7
-    COMBOBOX        IDC_COMBO1,383,17,105,30,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "",IDC_SLIDER1,"msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,293,7,183,7
+    COMBOBOX        IDC_COMBO1,383,17,105,70,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Camera Setting",IDC_CAM_OPTIONS_TXT,329,18,52,8
     PUSHBUTTON      "Set Camera",IDC_SET_CAM_OPTION_BTN,494,17,47,11
-    PUSHBUTTON      "Record Toggle",IDC_RECORD_TOGGLE_BTN,57,18,66,10,BS_BOTTOM
-    PUSHBUTTON      "Play Buffer",IDC_Play_Buffer_BTN,123,18,50,10
-    PUSHBUTTON      "Sound Trigger On",IDC_REPLAY_BTN,174,18,69,10
-    COMBOBOX        IDC_COMBO2,246,16,83,30,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    EDITTEXT        IDC_FPS_EDIT,543,16,9,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "Save Video File",IDC_RECORD_TOGGLE_BTN,43,15,66,13,BS_BOTTOM
+    PUSHBUTTON      "Play Buffer",IDC_Play_Buffer_BTN,431,353,50,10,NOT WS_VISIBLE | WS_DISABLED
+    PUSHBUTTON      "Sound Trigger On",IDC_REPLAY_BTN,483,353,69,10,NOT WS_VISIBLE | WS_DISABLED
+    COMBOBOX        IDC_COMBO2,239,16,84,79,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_FPS_EDIT,545,16,7,12,ES_AUTOHSCROLL | NOT WS_VISIBLE | WS_DISABLED
+    LTEXT           "Playback Speed",IDC_CAM_OPTIONS_TXT2,179,17,52,8
 END
 
 
@@ -130,14 +131,14 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "TODO: <Company name>"
-            VALUE "FileDescription", "TODO: <File description>"
+            VALUE "CompanyName", "coolio"
+            VALUE "FileDescription", "PS3eye Golf Swing Capture"
             VALUE "FileVersion", "1.0.0.1"
             VALUE "InternalName", "eyegolf.exe"
-            VALUE "LegalCopyright", "TODO: (c) <Company name>.  All rights reserved."
+            VALUE "LegalCopyright", "Nobody"
             VALUE "OriginalFilename", "eyegolf.exe"
-            VALUE "ProductName", "TODO: <Product name>"
-            VALUE "ProductVersion", "1.0.0.1"
+            VALUE "ProductName", "PS3eye Golf Swing Capture"
+            VALUE "ProductVersion", "0.3"
         END
     END
     BLOCK "VarFileInfo"

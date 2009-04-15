@@ -45,6 +45,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories="C:\Files\downloads\ffmpeg\include"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_DEBUG"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -67,9 +68,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="PS3EyeLib.lib"
+				AdditionalDependencies="libavcodec.a libavformat.a libavutil.a libswscale.a libz.a  libfaac.a libgcc.a"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="PS3EyeLib.lib"
+				AdditionalLibraryDirectories="C:\Files\downloads\ffmpeg\lib"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -103,7 +104,7 @@
 			ConfigurationType="1"
 			UseOfMFC="1"
 			UseOfATL="1"
-			CharacterSet="1"
+			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
 			<Tool
@@ -128,6 +129,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="C:\Files\downloads\ffmpeg\include"
 				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG"
 				MinimalRebuild="false"
 				RuntimeLibrary="0"
@@ -150,8 +152,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="PS3EyeLib.lib"
+				AdditionalDependencies="vfw32.lib user32.lib"
 				LinkIncremental="1"
+				AdditionalLibraryDirectories="C:\Files\downloads\ffmpeg\lib"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -189,6 +192,10 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
+			<File
+				RelativePath=".\AviFile.cpp"
+				>
+			</File>
 			<File
 				RelativePath=".\eyegolf.cpp"
 				>
@@ -231,6 +238,10 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\AviFile.h"
+				>
+			</File>
 			<File
 				RelativePath=".\CircularBuffer.h"
 				>
