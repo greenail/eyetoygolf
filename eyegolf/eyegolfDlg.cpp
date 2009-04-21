@@ -4,18 +4,20 @@
 #include "stdafx.h"
 #include "eyegolf.h"
 #include "eyegolfDlg.h"
+#include "highgui.h"
+#include "cxtypes.h"
 
 #include <iostream>
 #include <windows.h>
-#include <sys/timeb.h>
+//#include <sys/timeb.h>
 #include <atlimage.h>
 #include <windows.h>
 
 //#include <Gdiplusimaging.h>
 
 //#pragma comment(lib,"cv.lib")
-//#pragma comment(lib,"cxcore.lib")
-//#pragma comment(lib,"highgui.lib")
+#pragma comment(lib,"cxcore.lib")
+#pragma comment(lib,"highgui.lib")
 #pragma comment(lib,"PS3EyeLib.lib")
 
 
@@ -137,6 +139,7 @@ void CeyegolfDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_FPS_EDIT, FPS_EDIT);
 	DDX_Control(pDX, IDC_REPLAY_BTN, m_Replay_BTN);
 	DDX_Control(pDX, IDC_COMBO2, m_Fps_Option);
+	DDX_Control(pDX, IDC_BUTTON1, dFPS);
 }
 
 BEGIN_MESSAGE_MAP(CeyegolfDlg, CDialog)
@@ -209,7 +212,10 @@ BOOL CeyegolfDlg::OnInitDialog()
 	//hBitmap=CreateBitmap(320,240,24,1);
 	FPS_Playback = 30;
 	replay = true;
-
+	frames=0;
+	fps=60.0f;
+	lastTick=GetTickCount();
+	currTick=GetTickCount();
 	DWORD dwSoundRecordThreadID;
 	soundRecordRunning = true;
 	cout<<"Starting Sound Trigger Thread "<<endl;
@@ -359,6 +365,8 @@ void CeyegolfDlg::OnBnClickedSetCamOptionBtn()
 	pRecordToggle = true;
 	
 	// setup ringbuffer
+
+
 	cout<< "Creating ring buffer "<<endl;
 	bufSize = 200;
 	//CCircularBuffer< unsigned char*, 200 > ringBuf;
@@ -401,12 +409,12 @@ while(replay)
 		ringBufPlayback.Write(tempBuf);
 		// go into sleep loop to detect impact
 		int sleepTime = 1000/FPS_Playback;
-		for (i = 0;i<sleepTime;i++)
+		for (i = 0;i<(sleepTime/2);i++)
 			{
 			Sleep(1);
 			if (!replay)
 				{
-				i = 100000;
+				return;
 				}
 			}
 		}
@@ -418,34 +426,18 @@ cout << "Video Buffer Replay Thread Exiting"<<endl;
 void CeyegolfDlg::ThreadProc()
 {
 cout<< "Starting Video Capture Thread"<<endl;
-// setup FPS CRAP
-double		m_timePrevFrameStamp = 0;
-double		m_timeCurrFrameStamp = 0;
-double		m_nFps = 0.1;
-double		m_nFpsAlpha = 0.1;
-// counter to print fps every 60 frames
-int stupidCounter = 0;
+
+
+
+
 pCam->StartCapture();
-struct timeb timeStamp;
+
 while (pRecordToggle)
 {
 if(pCam->GetFrame(pBuffer, 24, false,true))
 		{
-		// FPS Calulation
-		ftime( &timeStamp );
-		m_timeCurrFrameStamp = (double) timeStamp.time*1000 + timeStamp.millitm;
-		if( m_nFps < 0 )
-		{
-			m_nFps = 1000 / ( m_timeCurrFrameStamp - m_timePrevFrameStamp );
-		} else
-		{	
-			m_nFps = ( 1 - m_nFpsAlpha ) * m_nFps + m_nFpsAlpha * 1000 / ( m_timeCurrFrameStamp - m_timePrevFrameStamp );
-		}
-		// set current time stamp as previuos
-		m_timePrevFrameStamp = m_timeCurrFrameStamp;
-		//sprintf(buff, "Fps: %g \0", m_nFps );
-		//cout << "Frame Grabbed"<<endl;
-
+		
+		getFPS();
 		//Create empty bitmap
 		hBitmap = CreateBitmap(width,height,24,1);
 		
@@ -453,14 +445,9 @@ if(pCam->GetFrame(pBuffer, 24, false,true))
 		ringBuf.Read(pTempBuf);
 		int imageSize = (width*height*24)/8;
 		memcpy(pTempBuf,pBuffer,imageSize);
-		//delete[] pTempBuf;
+		
 		ringBuf.Write(pTempBuf);
-		stupidCounter++;
-		if (stupidCounter == 60)
-		{
-			cout << m_nFps<<endl;
-			stupidCounter =0;
-		}
+		
 		int l_bytesSet = SetBitmapBits(hBitmap,(height*width*24)/8,pBuffer);
 		ShowBitmap(hBitmap,0,50);
 		/*  Saving image screws it up, deletes it from mem or something.
@@ -525,9 +512,9 @@ while (soundRecordRunning)
 		else
 			{
 			cout<<"Sound Trigger detected."<<endl;
-			Sleep(500);
+			Sleep(150);
 			CopyBuffer();
-			Sleep(1500);
+			Sleep(1850);
 			m_rec.Close();
 			m_rec.Open();
 			m_rec.SetBufferFunction((void*)&m_data,Process);
@@ -565,6 +552,25 @@ DWORD WINAPI CeyegolfDlg::ThreadSoundRecordStub(LPVOID p)
 	return 0;
 
 }	
+void CeyegolfDlg::getFPS()
+{
+
+currTick=GetTickCount();
+ULONG tickDiff=currTick-lastTick;
+frames++;
+if (tickDiff>=(ULONG)1000)
+	{
+	lastTick=currTick;
+	fps = frames;
+	frames = 0;
+	char buff[128];
+	sprintf(buff, "Fps: %d", fps );
+	dFPS.SetWindowText(buff);
+	}
+
+
+
+}
 
 
 bool CeyegolfDlg::ShowBitmap(HBITMAP hbmp,int x, int y)
@@ -577,6 +583,8 @@ bool CeyegolfDlg::ShowBitmap(HBITMAP hbmp,int x, int y)
 	pDC = this->GetDC();
 	dcMem.CreateCompatibleDC(pDC);
 	
+	
+	//Gdiplus::CImage MemBitmap;
 	CImage MemBitmap;
 	MemBitmap.Attach(hbmp);
 	memBmpWidth = MemBitmap.GetWidth();
@@ -604,6 +612,8 @@ bool CeyegolfDlg::ShowBitmap(HBITMAP hbmp,int x, int y)
 
 void CeyegolfDlg::OnBnClickedRecordToggleBtn()
 {
+	// create video file
+
 	/* reused button
 	//pRecordToggle = false;
 	// stop recording
@@ -612,9 +622,22 @@ void CeyegolfDlg::OnBnClickedRecordToggleBtn()
 
 	// init temp buffer
 	cout<< "Starting Movie File Creation"<<endl;
-	PBYTE tempBuf;
+	uchar * tempBuf;
 	// record video file
-	CAviFile	avi("Output.Avi",mmioFOURCC('M','S','V','C'),30);
+	//CAviFile	avi("Output.Avi",mmioFOURCC('M','S','V','C'),30);
+	//CvVideoWriter* aviOut = cvCreateVideoWriter("output.avi", CV_FOURCC('P','I','M','1'),30, cvSize(width, height), 1);
+	//CvVideoWriter* aviOut = cvCreateVideoWriter("output.avi", -1,30, cvSize(width, height), 1);
+	// Generate Time stamp.
+	COleDateTime DateTime = COleDateTime::GetCurrentTime();
+	CString TimeStamp = DateTime.Format( _T("%d-%m-%Y_%H-%M"));
+
+	// Generate the filename according to your will.
+	CString FileName;
+	FileName.Format( _T("eyegolf_%s.avi"), TimeStamp );
+	LPCTSTR fname;
+	fname = FileName;
+	CvVideoWriter* aviOut = cvCreateVideoWriter(fname, CV_FOURCC('D', 'I', 'V', 'X'),30, cvSize(width, height), 1);
+	IplImage *img2 = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 3);;
 	//stop playback (should stop record also)
 	replay = false;
 	// wait for thread to stop
@@ -624,6 +647,7 @@ void CeyegolfDlg::OnBnClickedRecordToggleBtn()
 	int countUsed = ringBufPlayback.countUsed;
 	cout << "Count Used: " << countUsed<<endl;
 	DWORD position;
+
 	for (int i = 0 ; i < countUsed ; i++)
 	{
 		//position = ringBufPlayback.Peek((unsigned char**)tempBuf,200);
@@ -634,17 +658,26 @@ void CeyegolfDlg::OnBnClickedRecordToggleBtn()
 		cout << "AVI Position: "<<position<<" count: " << i<<"---";
 		//ringBuf.
 		//cout << "Read: "<< ringBuf.get_countUsed() <<"of "<< bufCount<<"..";
-		HBITMAP hbmp=CreateBitmap(width,height,24,1);
-		int l_bytesSet = SetBitmapBits(hbmp,(height*width*24)/8,tempBuf);
+		//HBITMAP hbmp=CreateBitmap(width,height,24,1);
+		//int l_bytesSet = SetBitmapBits(hbmp,(height*width*24)/8,tempBuf);
+		
+		memcpy(img2->imageData,tempBuf,img2->imageSize);
+		
+		cvWriteFrame(aviOut, img2);
+
+		/* Moved to openCV video write
 		if(FAILED(avi.AppendNewFrame(hbmp)))	//avi.AppendNewFrame(320, 240, pBits, 32)))
 			{
 				//append bitmaps
 				cout << "AVI Error: "<< avi.GetLastErrorMessage()<<endl;
 			}
+		*/
 		ringBufPlayback.Write(tempBuf);
 	}
-	
-
+	cout<< "Closing video Writer and temp image buffer"<<endl;
+	cvReleaseVideoWriter(&aviOut);
+	cvReleaseVideoWriter(&aviOut);
+	cvReleaseImage(&img2);
 	//save avi
 	// not sure how it saves...
 	PlaybackBuffer();

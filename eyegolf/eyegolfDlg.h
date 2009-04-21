@@ -86,4 +86,11 @@ public:
 	bool soundTrigger;
 	CComboBox m_Fps_Option;
 	afx_msg void OnCbnSelchangeCombo2();
+	void CeyegolfDlg::getFPS();
+	ULONG lastTick,currTick;
+	//ULONG UPDATESPEED;
+	int frames;
+	int fps;
+	float g_speed;
+	CButton dFPS;
 };
